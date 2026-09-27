@@ -4,8 +4,14 @@ on:
 permissions:
   id-token: write
   contents: read
+concurrency:
+  group: azure-production
+  cancel-in-progress: false
 jobs:
+  validate:
+    uses: ./.github/workflows/build.yml
   deploy:
+    needs: validate
     runs-on: ubuntu-latest
     environment: production
     steps:

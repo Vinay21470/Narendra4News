@@ -6,3 +6,8 @@ dist/
 bin/
 obj/
 *.user
+
+__pycache__/
+*.pyc
+
+*.tsbuildinfo
