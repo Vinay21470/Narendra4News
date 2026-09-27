@@ -4,9 +4,28 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
 jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Azure infrastructure
+        run: az bicep build --file infra/main.bicep --outfile /tmp/main.json
   build:
     runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+          # Disposable CI container only; never used by deployment.
+          MSSQL_SA_PASSWORD: N4n-CI-Only-Disposable-83!
+        ports:
+          - 1433:1433
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,5 +40,10 @@ jobs:
           dotnet-version: '9.0.x'
       - run: dotnet restore && dotnet build --no-restore --configuration Release
         working-directory: backend/Narendra4News.API
-      - run: npm install --global azurite
-      - run: python3 tests/integration_flow.py
+      - run: npm install --global azurite@3.35.0
+      - name: SQLite integration flow
+        run: python3 tests/integration_flow.py
+      - name: SQL Server migration and integration flow
+        env:
+          N4N_TEST_SQL_CONNECTION: 'Server=localhost,1433;Database=N4nCi;User Id=sa;Password=N4n-CI-Only-Disposable-83!;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
+        run: python3 tests/integration_flow.py
